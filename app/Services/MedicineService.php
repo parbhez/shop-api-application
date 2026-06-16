@@ -10,9 +10,15 @@ class MedicineService
     /**
      * Get all medicines with alternatives.
      */
-    public function getAllMedicines($perPage = 15)
+    public function getAllMedicines($limit = null)
     {
-        return Medicine::with('alternatives')->paginate($perPage);
+        $query = Medicine::with('alternatives');
+
+        if ($limit) {
+            return $query->paginate($limit);
+        }
+
+        return $query->get();
     }
 
     /**

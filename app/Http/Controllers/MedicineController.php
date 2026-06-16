@@ -23,28 +23,45 @@ class MedicineController extends Controller
      */
     public function index(Request $request)
     {
-        $perPage = $request->get('per_page', 15);
-        $medicines = $this->medicineService->getAllMedicines($perPage);
-        
-        // Keep query parameters (like per_page) in the pagination links
-        $medicines->appends($request->all());
+        // Validate that limit is an integer if provided
+        $request->validate([
+            'limit' => 'nullable|integer|min:1'
+        ]);
 
-        // Wrap the collection in 'products' and include pagination metadata and links
+        // Get limit from request and cast to integer
+        $limit = $request->query('limit') ? (int) $request->query('limit') : null;
+
+        $medicines = $this->medicineService->getAllMedicines($limit);
+
+        if ($limit) {
+            // Keep query parameters (like limit) in the pagination links
+            $medicines->appends($request->all());
+
+            // Wrap the collection in 'products' and include pagination metadata and links
+            return response()->json([
+                'status' => true,
+                'message' => 'Medicines retrieved successfully',
+                'products' => MedicineResource::collection($medicines),
+                'total' => $medicines->total(),
+                'skip' => ($medicines->currentPage() - 1) * $medicines->perPage(),
+                'limit' => $medicines->perPage(),
+                'current_page' => $medicines->currentPage(),
+                'last_page' => $medicines->lastPage(),
+                'links' => [
+                    'first' => $medicines->url(1),
+                    'last' => $medicines->url($medicines->lastPage()),
+                    'prev' => $medicines->previousPageUrl(),
+                    'next' => $medicines->nextPageUrl(),
+                ]
+            ]);
+        }
+
+        // Return all without pagination metadata
         return response()->json([
             'status' => true,
             'message' => 'Medicines retrieved successfully',
+            'total' => $medicines->count(),
             'products' => MedicineResource::collection($medicines),
-            'total' => $medicines->total(),
-            'skip' => ($medicines->currentPage() - 1) * $medicines->perPage(),
-            'limit' => $medicines->perPage(),
-            'current_page' => $medicines->currentPage(),
-            'last_page' => $medicines->lastPage(),
-            'links' => [
-                'first' => $medicines->url(1),
-                'last' => $medicines->url($medicines->lastPage()),
-                'prev' => $medicines->previousPageUrl(),
-                'next' => $medicines->nextPageUrl(),
-            ]
         ]);
     }
 
@@ -89,7 +106,7 @@ class MedicineController extends Controller
     public function show($slug)
     {
         $medicine = $this->medicineService->getMedicineBySlug($slug);
-        
+
         return response()->json([
             'status' => true,
             'message' => 'Medicine details retrieved successfully',
@@ -140,7 +157,7 @@ class MedicineController extends Controller
     public function destroy($slug)
     {
         $medicine = $this->medicineService->getMedicineBySlug($slug);
-        
+
         DB::beginTransaction();
         try {
             $this->medicineService->deleteMedicine($medicine);

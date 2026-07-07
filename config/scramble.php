@@ -171,6 +171,11 @@ return [
      *     ],
      * ],
      */
-    // 'security_strategy' => \Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy::class,
-    'security_strategy' => null,
+    'security_strategy' => [
+        \Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy::class,
+        [
+            'middleware' => ['auth', 'auth:*', \App\Http\Middleware\JwtToken::class],
+            'scheme' => \Dedoc\Scramble\Support\Generator\SecurityScheme::http('bearer', 'JWT'),
+        ],
+    ],
 ];
